@@ -12,13 +12,23 @@ struct ContentView: View {
         TabView {
             TimerView()
                 .tabItem {
-                    Label("Timer", systemImage: "timer")
+                    Image(systemName: "timer")
+                        .environment(\.symbolRenderingMode, .hierarchical)
+                        .foregroundColor(.orange)
+                    Text("Timer")
                 }
             
             SessionHistoryView()
                 .tabItem {
-                    Label("History", systemImage: "list.bullet")
+                    Image(systemName: "list.bullet")
+                        .environment(\.symbolRenderingMode, .hierarchical)
+                        .foregroundColor(.orange)
+                    Text("History")
                 }
+        }
+        .tint(.orange)
+        .onAppear {
+            UITabBar.appearance().unselectedItemTintColor = .orange
         }
     }
 }
