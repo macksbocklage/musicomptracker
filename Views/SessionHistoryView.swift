@@ -7,6 +7,7 @@ struct SessionHistoryView: View {
     @State private var showingImporter = false
     @State private var showingImportAlert = false
     @State private var importedSessionCount = 0
+    @State private var sessionToEdit: CompositionSession?
     
     var body: some View {
         NavigationView {
@@ -18,6 +19,10 @@ struct SessionHistoryView: View {
                     List {
                         ForEach(sessionManager.sessions.sorted(by: { $0.date > $1.date })) { session in
                             SessionRowView(session: session)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    sessionToEdit = session
+                                }
                         }
                         .onDelete(perform: deleteItems)
                     }
@@ -38,6 +43,9 @@ struct SessionHistoryView: View {
                         Image(systemName: "ellipsis.circle")
                     }
                 }
+            }
+            .sheet(item: $sessionToEdit) { session in
+                EditSessionView(session: session)
             }
             .fileExporter(
                 isPresented: $showingExporter,
