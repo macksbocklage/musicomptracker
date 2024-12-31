@@ -1,64 +1,104 @@
 import SwiftUI
 
 struct TimerView: View {
-    @State private var isRecording = false
-    @State private var startTime: Date?
-    @State private var elapsedTime: TimeInterval = 0
+    @StateObject private var timerManager = TimerManager()
     @State private var showingLogSheet = false
     
-    let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
-    
     var body: some View {
-        ZStack {
-            Color("StudioDark")
-                .ignoresSafeArea()
+        VStack {
+            Spacer()
             
-            VStack {
-                // Timer Display
-                Text(timeString(from: elapsedTime))
-                    .font(.system(size: 64, weight: .bold, design: .monospaced))
-                    .foregroundColor(.orange)
-                    .padding(.vertical, 50)
+            Text(timerManager.formattedTime)
+                .font(.system(size: 70, weight: .medium, design: .monospaced))
+                .foregroundColor(.orange)
+            
+            Spacer()
+            
+            HStack(spacing: 60) {
+                // Play/Pause Button
+                Button(action: {
+                    if timerManager.isRunning {
+                        timerManager.pauseTimer()
+                    } else {
+                        timerManager.startTimer()
+                    }
+                }) {
+                    Image(systemName: timerManager.isRunning ? "pause.circle.fill" : "play.circle.fill")
+                        .resizable()
+                        .frame(width: 70, height: 70)
+                        .foregroundColor(.orange)
+                }
                 
-                // Record Button
-                Button(action: toggleRecording) {
-                    Circle()
-                        .fill(isRecording ? Color.red : Color.orange)
-                        .frame(width: 120, height: 120)
-                        .overlay(
-                            Image(systemName: isRecording ? "stop.fill" : "play.fill")
-                                .foregroundColor(.white)
-                                .font(.system(size: 50))
-                        )
+                // Stop Button
+                Button(action: {
+                    timerManager.stopTimer()
+                    showingLogSheet = true
+                }) {
+                    Image(systemName: "stop.circle.fill")
+                        .resizable()
+                        .frame(width: 70, height: 70)
+                        .foregroundColor(.orange)
                 }
             }
-        }
-        .onReceive(timer) { _ in
-            if isRecording, let start = startTime {
-                elapsedTime = Date().timeIntervalSince(start)
-            }
+            
+            Spacer()
         }
         .sheet(isPresented: $showingLogSheet) {
-            LogSessionView(duration: elapsedTime)
+            LogSessionView(duration: timerManager.elapsedTime)
         }
     }
+}
+
+class TimerManager: ObservableObject {
+    @Published private(set) var isRunning = false
+    @Published private(set) var elapsedTime: TimeInterval = 0
+    private var timer: Timer?
+    private var lastStartTime: Date?
+    private var accumulatedTime: TimeInterval = 0
     
-    private func toggleRecording() {
-        if isRecording {
-            // Stop recording and show log sheet
-            showingLogSheet = true
-        } else {
-            // Start recording
-            startTime = Date()
-            elapsedTime = 0
-        }
-        isRecording.toggle()
-    }
-    
-    private func timeString(from timeInterval: TimeInterval) -> String {
-        let hours = Int(timeInterval) / 3600
-        let minutes = Int(timeInterval) / 60 % 60
-        let seconds = Int(timeInterval) % 60
+    var formattedTime: String {
+        let hours = Int(elapsedTime) / 3600
+        let minutes = Int(elapsedTime) / 60 % 60
+        let seconds = Int(elapsedTime) % 60
         return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+    }
+    
+    func startTimer() {
+        isRunning = true
+        lastStartTime = Date()
+        
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            if let startTime = self.lastStartTime {
+                self.elapsedTime = self.accumulatedTime + Date().timeIntervalSince(startTime)
+            }
+        }
+    }
+    
+    func pauseTimer() {
+        isRunning = false
+        timer?.invalidate()
+        timer = nil
+        
+        if let startTime = lastStartTime {
+            accumulatedTime += Date().timeIntervalSince(startTime)
+        }
+        lastStartTime = nil
+    }
+    
+    func stopTimer() {
+        isRunning = false
+        timer?.invalidate()
+        timer = nil
+        
+        // Calculate final elapsed time before stopping
+        if let startTime = lastStartTime {
+            accumulatedTime += Date().timeIntervalSince(startTime)
+            elapsedTime = accumulatedTime
+        }
+        
+        // Reset for next session
+        lastStartTime = nil
+        accumulatedTime = 0
     }
 } 
