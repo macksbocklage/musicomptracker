@@ -5,25 +5,78 @@ struct EditSessionView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var sessionManager = SessionManager.shared
     
+    @State private var name: String
     @State private var motivationLevel: Int
     @State private var notes: String
+    @State private var sessionDate: Date
+    @State private var hours: Int
+    @State private var minutes: Int
+    @State private var seconds: Int
     
     init(session: CompositionSession) {
         self.session = session
+        _name = State(initialValue: session.name)
         _motivationLevel = State(initialValue: session.motivationLevel)
         _notes = State(initialValue: session.notes)
+        _sessionDate = State(initialValue: session.date)
+        
+        // Initialize time components
+        let totalSeconds = Int(session.duration)
+        _hours = State(initialValue: totalSeconds / 3600)
+        _minutes = State(initialValue: (totalSeconds % 3600) / 60)
+        _seconds = State(initialValue: totalSeconds % 60)
     }
     
     var body: some View {
         NavigationView {
             Form {
-                Section("Session Details") {
-                    Text(timeString(from: session.duration))
-                        .font(.title2)
-                        .foregroundColor(.orange)
-                    
-                    Text(formatDate(session.date))
-                        .foregroundColor(.secondary)
+                Section("Session Time") {
+                    HStack {
+                        // Hours Picker
+                        Picker("", selection: $hours) {
+                            ForEach(0..<24) { hour in
+                                Text("\(hour)")
+                                    .tag(hour)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(width: 50)
+                        .clipped()
+                        Text("h")
+                        
+                        // Minutes Picker
+                        Picker("", selection: $minutes) {
+                            ForEach(0..<60) { minute in
+                                Text("\(minute)")
+                                    .tag(minute)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(width: 50)
+                        .clipped()
+                        Text("m")
+                        
+                        // Seconds Picker
+                        Picker("", selection: $seconds) {
+                            ForEach(0..<60) { second in
+                                Text("\(second)")
+                                    .tag(second)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(width: 50)
+                        .clipped()
+                        Text("s")
+                    }
+                    .padding(.vertical)
+                }
+                
+                Section("Start Date & Time") {
+                    DatePicker(
+                        "Start Time",
+                        selection: $sessionDate,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
                 }
                 
                 Section("Motivation Level") {
@@ -49,28 +102,17 @@ struct EditSessionView: View {
     }
     
     private func saveChanges() {
+        let totalDuration = TimeInterval(hours * 3600 + minutes * 60 + seconds)
+        
         let updatedSession = CompositionSession(
             id: session.id,
-            duration: session.duration,
+            name: name.isEmpty ? "Untitled Session" : name,
+            duration: totalDuration,
             motivationLevel: motivationLevel,
             notes: notes,
-            date: session.date
+            date: sessionDate
         )
         sessionManager.updateSession(updatedSession)
         dismiss()
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-    
-    private func timeString(from timeInterval: TimeInterval) -> String {
-        let hours = Int(timeInterval) / 3600
-        let minutes = Int(timeInterval) / 60 % 60
-        let seconds = Int(timeInterval) % 60
-        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
     }
 } 

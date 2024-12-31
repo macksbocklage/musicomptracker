@@ -5,12 +5,17 @@ struct LogSessionView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var sessionManager = SessionManager.shared
     
+    @State private var name = ""
     @State private var motivationLevel = 3
     @State private var notes = ""
     
     var body: some View {
         NavigationView {
             Form {
+                Section("Session Name") {
+                    TextField("Enter session name", text: $name)
+                }
+                
                 Section("Duration") {
                     Text(timeString(from: duration))
                         .font(.title2)
@@ -44,6 +49,7 @@ struct LogSessionView: View {
     
     private func saveSession() {
         let session = CompositionSession(
+            name: name.isEmpty ? "Untitled Session" : name,
             duration: duration,
             motivationLevel: motivationLevel,
             notes: notes,

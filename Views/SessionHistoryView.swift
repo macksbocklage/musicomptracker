@@ -37,8 +37,12 @@ struct SessionRowView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(formatDate(session.date))
+            Text(session.name)
                 .font(.headline)
+            
+            Text(formatDate(session.date))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
             
             HStack {
                 Label(timeString(from: session.duration), systemImage: "clock")
